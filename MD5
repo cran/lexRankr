@@ -1,0 +1,16 @@
+f14c7d947304af0e70790f5d4fb18322 *DESCRIPTION
+a710cdf5ebc3402eb36a9c7244abdd62 *LICENSE
+679f0a9629a10b3d7ab981851042188a *NAMESPACE
+24a6cac567db7feff11cc8fcb389d5ca *R/lexRank.R
+b913f05a18273a1a2dab24c4f64f2d06 *R/lexRankFromSimil.R
+724e2a357716f5ae1cf4137640419ded *R/sentenceParse.R
+43fb7040ce6a47906faf146067f9d601 *R/sentenceSimil.R
+6c276fb56c0ee80e3f74e59eb6e49c41 *R/sentenceTokenParse.R
+55d79ba23649d4ca2cb21e0c2593e5be *R/tokenize.R
+fd22628cee5c4002e1acc13dd4de85cf *R/tokenizeSentenceParse.R
+8d9190cf0b125fa7e16227fb960b4be7 *man/lexRank.Rd
+3409c9b9026182386a6123fc90aa39e8 *man/lexRankFromSimil.Rd
+59d7a80fbb8dd83bdcd3b6e159db33f6 *man/sentenceParse.Rd
+3119e56246dd4bd7a9f8f5ac9af03fd4 *man/sentenceSimil.Rd
+3c3553bbb110079afbca2cec4b0d8017 *man/sentenceTokenParse.Rd
+2b28bf4eb65e4369816f5c42d86b9a73 *man/tokenize.Rd
