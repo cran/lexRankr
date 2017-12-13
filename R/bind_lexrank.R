@@ -13,20 +13,23 @@
 #' @param ... tokenizing options to be passed to lexRankr::tokenize.  Ignored if \code{level} is "sentences"
 #' @return A dataframe with an additional column of lexrank scores (column is given name lexrank)
 #' @examples
-#' library(dplyr)
 #' 
-#' df <- dplyr::tibble(doc_id = 1:3, 
-#'                     text = c("Testing the system. Second sentence for you.", 
-#'                              "System testing the tidy documents df.", 
-#'                              "Documents will be parsed and lexranked."))
+#' df <- data.frame(doc_id = 1:3, 
+#'                  text = c("Testing the system. Second sentence for you.", 
+#'                           "System testing the tidy documents df.", 
+#'                           "Documents will be parsed and lexranked."),
+#'                  stringsAsFactors = FALSE)
+#' 
+#' \dontrun{
+#' library(magrittr)
 #' 
 #' df %>% 
 #'   unnest_sentences(sents, text) %>% 
-#'   bind_lexrank(sents, doc_id, level = 'sentences')
+#'   bind_lexrank(sents, doc_id, level = "sentences")
 #' 
 #' df %>% 
 #'   unnest_sentences(sents, text) %>% 
-#'   bind_lexrank_("sents", "doc_id", level = 'sentences')
+#'   bind_lexrank_("sents", "doc_id", level = "sentences")
 #' 
 #' df <- data.frame(doc_id  = c(1, 1, 1, 1, 1, 1, 1, 2, 2, 2,
 #'                              2, 2, 2, 3, 3, 3, 3, 3, 3), 
@@ -41,6 +44,7 @@
 #' 
 #' df %>% 
 #'   bind_lexrank(tokens, doc_id, sent_id, level = 'tokens')
+#' }
 #' @export
 bind_lexrank_ <- function(tbl, text, doc_id, sent_id=NULL, level=c("sentences", "tokens"), threshold=.2, usePageRank=TRUE, damping=0.85, continuous=FALSE, ...) {
   if(!is.data.frame(tbl)) stop("tbl must be a dataframe")
@@ -48,7 +52,6 @@ bind_lexrank_ <- function(tbl, text, doc_id, sent_id=NULL, level=c("sentences", 
   if(!(doc_id %in% names(tbl))) stop("doc_id column not found in tbl")
   if(!is.character(level)) stop("level must be character")
   if(length(level) > 1) {
-    warning("only first element of level will be used")
     level = level[1]
   }
   if(!(level %in% c("sentences", "tokens"))) stop("invalid value of level; accepted values for level are 'sentences' and 'tokens'")
@@ -76,33 +79,35 @@ bind_lexrank_ <- function(tbl, text, doc_id, sent_id=NULL, level=c("sentences", 
       subTokenDfList <- lapply(seq_along(tokenList), function(j) {
         data.frame(docId=tbl[[doc_id]][i], sentenceId=doc_sent_ids[i], token=tokenList[[j]], stringsAsFactors = FALSE)
       })
-      dplyr::bind_rows(subTokenDfList)
+      do.call('rbind', subTokenDfList)
     })
     
-    tokenDf <- dplyr::bind_rows(tokenDfList) %>%
-      dplyr::filter(!is.na(token))
+    tokenDf <- do.call('rbind', tokenDfList)
+    tokenDf <- tokenDf[!is.na(tokenDf$token),]
   } else {
-    tokenDf <- dplyr::tibble(docId=tbl[[doc_id]], sentenceId=doc_sent_ids, token=tbl[[text]])
+    tokenDf <- data.frame(docId=tbl[[doc_id]], sentenceId=doc_sent_ids, token=tbl[[text]], stringsAsFactors = FALSE)
   }
   
   similDf <- sentenceSimil(tokenDf$sentenceId, tokenDf$token, tokenDf$docId)
   topSentIdsDf <- lexRankFromSimil(similDf$sent1, similDf$sent2, similDf$similVal, threshold=threshold, n=Inf, returnTies=TRUE, usePageRank=usePageRank, damping=damping, continuous=continuous)
-  lex_lookup <- stringr::str_split_fixed(topSentIdsDf$sentenceId, uuid_sep, n=2) %>% 
-    dplyr::as_data_frame() %>% 
-    stats::setNames(c(doc_id, sent_id))
+  lex_lookup <- do.call('rbind', strsplit(topSentIdsDf$sentenceId, uuid_sep, fixed=TRUE)) 
+  lex_lookup <- as.data.frame(lex_lookup)
+  names(lex_lookup) <- c(doc_id, sent_id)
+  
   class(lex_lookup[[doc_id]])  <- doc_id_class
   
   lex_lookup$lexrank <- topSentIdsDf$value
   
   if(level=="tokens") {
     class(lex_lookup[[sent_id]]) <- class(tbl[[sent_id]])
-    tbl_out <- dplyr::left_join(tbl, lex_lookup, by=c(doc_id, sent_id))
+    tbl_out <- merge(tbl, lex_lookup, all.x=TRUE, by=c(doc_id, sent_id))
   } else {
     tbl[[uuid_kinda]] <- as.character(sent_ids)
-    tbl_out <- dplyr::left_join(tbl, lex_lookup, by=c(doc_id, uuid_kinda))
+    tbl_out <- merge(tbl, lex_lookup, all.x=TRUE, by=c(doc_id, uuid_kinda))
+    tbl_out <- tbl_out[order(as.numeric(tbl_out[[uuid_kinda]])),]
     tbl_out[[uuid_kinda]] <- NULL
   }
-  
+  rownames(tbl_out) <- NULL
   class(tbl_out) <- tbl_class
   tbl_out
 }

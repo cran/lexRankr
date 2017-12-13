@@ -1,4 +1,3 @@
-utils::globalVariables(c("weight","sentenceId","degree","degRank"))
 #' Compute LexRanks from pairwise sentence similarities
 
 #' @description Compute LexRanks from sentence pair similarities using the page rank algorithm or degree centrality the methods used to compute lexRank are discussed in "LexRank: Graph-based Lexical Centrality as Salience in Text Summarization."
@@ -15,7 +14,6 @@ utils::globalVariables(c("weight","sentenceId","degree","degRank"))
 #' @references \url{http://www.cs.cmu.edu/afs/cs/project/jair/pub/volume22/erkan04a-html/erkan04a.html}
 #' @examples
 #' lexRankFromSimil(s1=c("d1_1","d1_1","d1_2"), s2=c("d1_2","d2_1","d2_1"), simil=c(.01,.03,.5))
-#' @importFrom magrittr "%>%"
 
 #' @export
 
@@ -29,25 +27,23 @@ lexRankFromSimil <- function(s1, s2, simil, threshold=.2, n=3, returnTies=TRUE, 
   if(!is.numeric(simil)) stop("simil must be numeric")
   if(!is.numeric(n)) stop("n must be numeric")
   if(length(n) != 1) stop("n must be length 1")
-
+  
   if (length(s1) != length(s2) | length(s1) != length(simil)) stop("s1, s2, & simil must all be the same length")
   if (sum(simil) == 0) stop("all simil values are zero")
-  if (sum(simil > threshold) == 0) stop("all simil values are below threshold")
-
+  if (sum(simil > threshold) == 0 & !continuous) stop("all simil values are below threshold; try lowering threshold or setting continuous to TRUE if you want to retry lexRanking this input data")
+  
   s1 <- as.character(s1)
   s2 <- as.character(s2)
-
+  
   if(returnTies) tieMethod <- "min" else if(!returnTies) tieMethod <- "first"
-
-  edges <- dplyr::data_frame(s1=s1, s2=s2, weight=simil)
-
+  
+  edges <- data.frame(s1=s1, s2=s2, weight=simil, stringsAsFactors = FALSE)
+  
   if(!continuous | !usePageRank) {
     if(!is.numeric(threshold)) stop("threshold must be numeric")
     if(length(threshold) != 1) stop("threshold must be length 1")
-
-    edges <- edges %>%
-      dplyr::filter(weight > threshold) %>%
-      dplyr::select(-weight)
+    
+    edges <- edges[edges$weight > threshold, c("s1","s2")]
   }
 
   if (usePageRank) {
@@ -61,15 +57,20 @@ lexRankFromSimil <- function(s1, s2, simil, threshold=.2, n=3, returnTies=TRUE, 
     centralDf <- data.frame(sentenceId=names(topCentral), value=topCentral,stringsAsFactors = FALSE)
     rownames(centralDf) <- NULL
   } else if(!usePageRank){
-    centralDf <- dplyr::data_frame(sentenceId = c(edges$s1, edges$s2)) %>%
-      dplyr::group_by(sentenceId) %>%
-      dplyr::summarise(degree=n()) %>%
-      dplyr::ungroup() %>%
-      dplyr::arrange(dplyr::desc(degree)) %>%
-      dplyr::mutate(degRank = rank(1/degree, ties.method = tieMethod)) %>%
-      dplyr::filter(degRank <= n) %>%
-      dplyr::select(sentenceId, value=degree)
+    centralDf = data.frame(sentenceId = c(edges$s1, edges$s2), stringsAsFactors = FALSE)
+    centralDfList = split(centralDf, centralDf$sentenceId)
+    centralDfList = lapply(centralDfList, function(dfi) {
+      dfi[['degree']] = nrow(dfi)
+      unique(dfi)
+    })
+    centralDf = do.call('rbind', centralDfList)
+    centralDf = centralDf[order(-centralDf$degree),]
+    centralDf[['degRank']] = rank(1/centralDf$degree, ties.method = tieMethod)
+    centralDf = centralDf[centralDf$degRank <= n, c("sentenceId", "degree")]
+    names(centralDf) = c("sentenceId", "value")
+    
     class(centralDf) <- "data.frame"
+    rownames(centralDf) <- NULL
   }
   return(centralDf)
 }

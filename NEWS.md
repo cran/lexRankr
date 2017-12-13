@@ -1,3 +1,12 @@
+
+# lexRankr 0.5.0
+
+* bug fix in sentence parsing for parsing exclamatory sentences
+* converted idf calculation from `idf(d, t) = log( n / df(d, t) )` to `idf(d, t) = log( n / df(d, t) ) + 1` to avoid zeroing out common word tfidf values
+* removed dplyr, tidyr, stringr, magrittr, & tm as dependencies
+* created option to bypass assumption that each row/vector-element are different documents in `lexRank` and `unnest_sentences`
+* various bug fixes in token & sentence parsing
+
 # lexRankr 0.4.1
 
 * added bug report url: (https://github.com/AdamSpannbauer/lexRankr/issues/)

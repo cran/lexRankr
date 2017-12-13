@@ -5,9 +5,11 @@
 \alias{unnest_sentences}
 \title{Split a column of text into sentences}
 \usage{
-unnest_sentences_(tbl, output, input, output_id = "sent_id", drop = TRUE)
+unnest_sentences_(tbl, output, input, doc_id = NULL, output_id = "sent_id",
+  drop = TRUE)
 
-unnest_sentences(tbl, output, input, output_id = "sent_id", drop = TRUE)
+unnest_sentences(tbl, output, input, doc_id = NULL, output_id = "sent_id",
+  drop = TRUE)
 }
 \arguments{
 \item{tbl}{dataframe containing column of text to be split into sentences}
@@ -15,6 +17,8 @@ unnest_sentences(tbl, output, input, output_id = "sent_id", drop = TRUE)
 \item{output}{name of column to be created to store parsed sentences}
 
 \item{input}{name of input column of text to be parsed into sentences}
+
+\item{doc_id}{column of document ids; if not provided it will be assumed that each row is a different document}
 
 \item{output_id}{name of column to be created to store sentence ids}
 
@@ -27,16 +31,20 @@ A data.frame of parsed sentences and sentence ids
 Split a column of text into sentences
 }
 \examples{
-library(dplyr)
 
-df <- dplyr::tibble(doc_id = 1:3, 
-                    text = c("Testing the system. Second sentence for you.", 
-                             "System testing the tidy documents df.", 
-                             "Documents will be parsed and lexranked."))
+df <- data.frame(doc_id = 1:3, 
+                 text = c("Testing the system. Second sentence for you.", 
+                          "System testing the tidy documents df.", 
+                          "Documents will be parsed and lexranked."),
+                 stringsAsFactors=FALSE)
 
 unnest_sentences(df, sents, text)
 unnest_sentences_(df, "sents", "text")
 
+\dontrun{
+library(magrittr)
+
 df \%>\% 
   unnest_sentences(sents, text)
+}
 }

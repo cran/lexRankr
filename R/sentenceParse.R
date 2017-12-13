@@ -8,7 +8,6 @@
 #' sentenceParse("Bill is trying to earn a Ph.D.", "You have to have a 5.0 GPA.")
 #' sentenceParse(c("Bill is trying to earn a Ph.D.", "You have to have a 5.0 GPA."),
 #'                docId=c("d1","d2"))
-#' @importFrom magrittr "%>%"
 
 #' @export
 sentenceParse <- function(text, docId = "create") {
@@ -20,18 +19,27 @@ sentenceParse <- function(text, docId = "create") {
     } else if(length(docId)==length(text)) {
       createDocIds <- FALSE
     } else if(length(docId)!=length(text)) stop("docId vector must be same length as text vector")
-
-
+  
   sentences <- sentence_parser(text)
   sentenceDfList <- lapply(seq_along(sentences), function(i) {
     sentVec <- trimws(sentences[[i]])
+    if (length(sentVec) == 0) sentVec = ""
     if(createDocIds) {
-      data.frame(docId=i, sentenceId=paste0(i,"_",seq_along(sentVec)), sentence=sentVec, stringsAsFactors = FALSE)
+      out = data.frame(docId=i, sentenceId=paste0(i,"_",seq_along(sentVec)), sentence=sentVec, stringsAsFactors = FALSE)
     } else if(!createDocIds) {
-      data.frame(docId=docId[i], sentenceId=paste0(docId[i],"_",seq_along(sentVec)), sentence=sentVec, stringsAsFactors = FALSE)
+      out = data.frame(docId=docId[i], sentence=sentVec, stringsAsFactors = FALSE)
     }
+    
+    out
   })
-  sentenceDf <- dplyr::bind_rows(sentenceDfList)
+  sentenceDf <- do.call('rbind', sentenceDfList)
+  sentenceDfList <- split(sentenceDf, sentenceDf$docId)
+  sentenceDfList <- lapply(sentenceDfList, function(dfi) {
+    dfi$sentenceId <- paste0(dfi$docId, "_", 1:nrow(dfi))
+    dfi[,c("docId","sentenceId","sentence")]
+  })
+  sentenceDf <- do.call('rbind', sentenceDfList)
   class(sentenceDf) <- "data.frame"
+  rownames(sentenceDf) <- NULL
   return(sentenceDf)
 }
